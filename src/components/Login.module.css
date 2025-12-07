@@ -1,0 +1,25 @@
+.formLight {
+  background-color: #ffffff;
+  color: #121212;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.formLight h1,
+.formLight h2,
+.formLight h3,
+.formLight p,
+.formLight label {
+  color: #121212;
+}
+
+.formLight input[type="text"],
+.formLight input[type="email"],
+.formLight input[type="password"] {
+  background-color: #f4f4f4;
+  border: 1px solid #ccc;
+  color: #121212;
+}
+
+.formLight .errorMessage {
+  color: #d93025;
+}
