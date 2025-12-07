@@ -1,7 +1,19 @@
-// Automatically determine the backend URL based on where the frontend is loaded from.
-// If loaded from localhost, assume backend is at localhost:3001.
-// If loaded from a network IP (e.g., 192.168.1.5), assume backend is at 192.168.1.5:3001.
+// Dynamic API URL based on environment
+// If on localhost, use local backend
+// If deployed, use Render backend
 
-export const API_URL = `${window.location.protocol}//${window.location.hostname}:3001/api`;
+const getApiUrl = () => {
+    const hostname = window.location.hostname;
+
+    // Development: localhost
+    if (hostname === 'localhost' || hostname === '127.0.0.1') {
+        return 'http://localhost:3001/api';
+    }
+
+    // Production: Render backend
+    return 'https://meal-rescue-backend.onrender.com/api';
+};
+
+export const API_URL = getApiUrl();
 
 console.log('API Base URL:', API_URL);
