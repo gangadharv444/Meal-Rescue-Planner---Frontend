@@ -16,26 +16,51 @@ function App() {
   const [token, setToken] = useState(null);
   const navigate = useNavigate();
 
+  // Helper for safe storage access
+  const safeStorage = {
+    getItem: (key) => {
+      try {
+        return localStorage.getItem(key);
+      } catch (e) {
+        console.warn('LocalStorage access denied', e);
+        return null;
+      }
+    },
+    setItem: (key, value) => {
+      try {
+        localStorage.setItem(key, value);
+      } catch (e) {
+        console.warn('LocalStorage access denied', e);
+      }
+    },
+    removeItem: (key) => {
+      try {
+        localStorage.removeItem(key);
+      } catch (e) {
+        console.warn('LocalStorage access denied', e);
+      }
+    }
+  };
+
   // 2. Wrap handleLogin in useCallback
-  // This memoizes the function so it doesn't get recreated on every render
   const handleLogin = useCallback((session) => {
     setToken(session.access_token);
-    localStorage.setItem('token', session.access_token);
+    safeStorage.setItem('token', session.access_token);
     navigate('/dashboard');
-  }, [navigate]); // It only depends on 'navigate'
+  }, [navigate]);
 
   // 3. Wrap handleLogout in useCallback
   const handleLogout = useCallback(async () => {
     await supabase.auth.signOut();
     setToken(null);
-    localStorage.removeItem('token');
+    safeStorage.removeItem('token');
     navigate('/');
-  }, [navigate]); // It only depends on 'navigate'
+  }, [navigate]);
 
   // --- THIS IS THE UPDATED PART ---
   useEffect(() => {
     // 1. Check for an existing session in localStorage
-    const session = localStorage.getItem('token');
+    const session = safeStorage.getItem('token');
     if (session) {
       setToken(session);
     }
@@ -47,21 +72,18 @@ function App() {
 
         if (event === 'PASSWORD_RECOVERY') {
           // User clicked a reset link
-          setToken(session.access_token);
+          if (session) setToken(session.access_token);
           navigate('/update-password');
         } else if (event === 'SIGNED_IN') {
           console.log('Signed In session detected');
-          // Important: Don't redirect to dashboard if we are on the update-password page!
-          // This allows the user to actually see the form to type their new password.
           if (window.location.pathname === '/update-password' || window.location.hash.includes('type=recovery')) {
-            setToken(session.access_token);
-            // Do NOT navigate to /dashboard
+            if (session) setToken(session.access_token);
           } else {
             handleLogin(session);
           }
         } else if (event === 'SIGNED_OUT') {
           setToken(null);
-          localStorage.removeItem('token');
+          safeStorage.removeItem('token');
           navigate('/');
         }
       }
