@@ -274,7 +274,6 @@ function Dashboard({ token, onLogout }) {
 
           <Stack align="center" mt={50} mb="xl" gap={5}>
             <Text c="dimmed" size="xs">&copy; Meal Rescue 2025</Text>
-            <Text c="dimmed" size="xs">Made with <Text span c="red" inherit>&#10084;&#65039;</Text> for my wife</Text>
           </Stack>
         </Container>
       </AppShell.Main>
