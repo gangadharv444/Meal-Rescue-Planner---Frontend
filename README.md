@@ -1,16 +1,43 @@
-# React + Vite
+# Meal Rescue Planner - Frontend
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+A beautiful and responsive React application to help manage meals, discover recipes based on weather, and generate weekly meal plans.
 
-Currently, two official plugins are available:
+**Live App:** [https://meal-rescue-planner-frontend-cxgj.vercel.app/](https://meal-rescue-planner-frontend-cxgj.vercel.app/)
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+## Features
 
-## React Compiler
+- ✨ **AI-Powered Suggestions**: Get meal recommendations tailored to current weather conditions.
+- 📅 **7-Day Meal Planning**: Automatically generate a full week of meals based on your preferences.
+- 💾 **Meal Vault**: Store and manage your favorite meals.
+- 🔐 **Secure Authentication**: Custom JWT-based login and signup.
+- 🎨 **Modern UI**: Built with Mantine UI and Tabler Icons.
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+## Tech Stack
 
-## Expanding the ESLint configuration
+- **React** with **Vite**
+- **Mantine UI** for components and styling
+- **React Query** for efficient data fetching and caching
+- **Axios** for API communication
+- **JWT Decode** for session management
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+## Getting Started
+
+### 1. Install Dependencies
+```bash
+npm install
+```
+
+### 2. Configure API URL
+Create or update `src/config.js`:
+```javascript
+export const API_URL = 'your_backend_api_url';
+```
+
+### 3. Start Development Server
+```bash
+npm run dev
+```
+
+## Deployment
+
+The application is optimized for deployment on **Vercel**.
