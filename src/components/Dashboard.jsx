@@ -1,11 +1,12 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import axios from 'axios';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   AppShell, Container, Group, Title, Button, Text,
-  Card, Badge, Grid, Select, ActionIcon, Stack,
-  Loader, Notification, ThemeIcon, Paper, Tabs
+  Card, Badge, Grid, Select, Stack,
+  Loader, Paper
 } from '@mantine/core';
-import { IconLogout, IconRefresh, IconChefHat, IconCalendar, IconDatabase } from '@tabler/icons-react'; // Assuming tabler icons are available or we use generic
+import { IconLogout, IconRefresh, IconChefHat, IconCalendar, IconDatabase } from '@tabler/icons-react';
 
 import MealList from './MealList.jsx';
 import AddMealForm from './AddMealForm.jsx';
@@ -15,7 +16,6 @@ import EditMealForm from './EditMealForm.jsx';
 import { ThemeToggle } from './ThemeToggle';
 import { API_URL } from '../config';
 
-// Fallback icons if tabler-icons-react isn't installed
 const Icons = {
   Logout: () => <span>🚪</span>,
   Refresh: () => <span>🔄</span>,
@@ -23,15 +23,9 @@ const Icons = {
   Calendar: () => <span>📅</span>,
   Database: () => <span>💾</span>
 };
-// Try to rely on the package.json deps. I didn't see tabler-icons in the list I viewed earlier?
-// Package.json: "@mantine/core": "^8.3.8", "@mantine/hooks": "^8.3.8", "react": "^19.1.1".
-// No tabler icons. I should use text emojis or the GoogleIcons I can make, for now let's use Emojis to be safe and fast.
 
 function Dashboard({ token, onLogout }) {
-  // --- STATE ---
-  const [meals, setMeals] = useState([]);
-  const [error, setError] = useState(null);
-  const [loading, setLoading] = useState(true);
+  const queryClient = useQueryClient();
 
   const [suggestion, setSuggestion] = useState(null);
   const [suggestionError, setSuggestionError] = useState(null);
@@ -44,39 +38,41 @@ function Dashboard({ token, onLogout }) {
   const [editingMeal, setEditingMeal] = useState(null);
   const [dietType, setDietType] = useState('anything');
 
-  // --- EFFECT: DATA FETCHING ---
-  useEffect(() => {
-    const fetchMeals = async () => {
-      try {
-        let res = await axios.get(`${API_URL}/meals`, { headers: { 'Authorization': `Bearer ${token}` } });
-
-        // Self-healing for Google Login
-        if (!res.data || res.data.length === 0) {
-          await axios.post(`${API_URL}/ensure-defaults`, {}, { headers: { 'Authorization': `Bearer ${token}` } });
-          res = await axios.get(`${API_URL}/meals`, { headers: { 'Authorization': `Bearer ${token}` } });
-        }
-
-        setMeals(res.data || []);
-      } catch (err) {
-        setError(err.response?.data?.error || 'Failed to fetch meals');
-      } finally {
-        setLoading(false);
+  // React Query: Fetch Meals
+  const { data: meals = [], isLoading: loading, error: fetchError } = useQuery({
+    queryKey: ['meals'],
+    queryFn: async () => {
+      let res = await axios.get(`${API_URL}/meals`, { headers: { 'Authorization': `Bearer ${token}` } });
+      if (!res.data || res.data.length === 0) {
+        await axios.post(`${API_URL}/ensure-defaults`, {}, { headers: { 'Authorization': `Bearer ${token}` } });
+        res = await axios.get(`${API_URL}/meals`, { headers: { 'Authorization': `Bearer ${token}` } });
       }
-    };
-    fetchMeals();
-  }, [token]);
+      return res.data;
+    },
+    enabled: !!token
+  });
 
-  // --- HANDLERS ---
-  const handleMealAdded = (newMeal) => setMeals([...meals, newMeal]);
+  // React Query: Delete Meal
+  const deleteMutation = useMutation({
+    mutationFn: (mealId) => axios.delete(`${API_URL}/meals/${mealId}`, { headers: { 'Authorization': `Bearer ${token}` } }),
+    onSuccess: () => queryClient.invalidateQueries(['meals'])
+  });
 
-  const handleDeleteMeal = async (mealId) => {
-    try {
-      await axios.delete(`${API_URL}/meals/${mealId}`, { headers: { 'Authorization': `Bearer ${token}` } });
-      setMeals(meals.filter(meal => meal.id !== mealId));
-    } catch (err) {
-      setError(err.response?.data?.error || 'Failed to delete meal');
-    }
+  const handleDeleteMeal = (mealId) => {
+    deleteMutation.mutate(mealId);
   };
+
+  const handleMealAdded = () => {
+    queryClient.invalidateQueries(['meals']);
+  };
+
+  const handleMealUpdated = () => {
+    queryClient.invalidateQueries(['meals']);
+    setEditingMeal(null);
+  };
+
+  const handleCancelEdit = () => setEditingMeal(null);
+  const handleEditClick = (meal) => setEditingMeal(meal);
 
   const handleGetSuggestion = (excludeId = null) => {
     if (!navigator.geolocation) {
@@ -125,15 +121,6 @@ function Dashboard({ token, onLogout }) {
     }
   };
 
-  const handleEditClick = (meal) => setEditingMeal(meal);
-  const handleMealUpdated = (updatedMeal) => {
-    setMeals(meals.map(meal => meal.id === updatedMeal.id ? updatedMeal : meal));
-    setEditingMeal(null);
-  };
-  const handleCancelEdit = () => setEditingMeal(null);
-
-
-  // --- RENDER ---
   if (loading) {
     return (
       <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>
@@ -143,20 +130,12 @@ function Dashboard({ token, onLogout }) {
   }
 
   return (
-    <AppShell
-      header={{ height: 60 }}
-      padding="md"
-    >
+    <AppShell header={{ height: 60 }} padding="md">
       <AppShell.Header>
         <Container size="xl" h="100%">
           <Group justify="space-between" h="100%">
             <Group>
-              <Text
-                size="xl"
-                fw={900}
-                variant="gradient"
-                gradient={{ from: 'orange', to: 'red', deg: 90 }}
-              >
+              <Text size="xl" fw={900} variant="gradient" gradient={{ from: 'orange', to: 'red', deg: 90 }}>
                 Meal Rescue Plan
               </Text>
             </Group>
@@ -173,8 +152,6 @@ function Dashboard({ token, onLogout }) {
       <AppShell.Main>
         <Container size="xl">
           <Grid gutter="xl">
-
-            {/* LEFT COLUMN: HERO SUGGESTION */}
             <Grid.Col span={{ base: 12, md: 7 }}>
               <Card shadow="sm" padding="lg" radius="md" withBorder style={{ minHeight: '300px', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
                 <Card.Section withBorder inheritPadding py="xs">
@@ -198,13 +175,8 @@ function Dashboard({ token, onLogout }) {
                 <Stack align="center" mt="md" mb="md" style={{ flexGrow: 1, justifyContent: 'center' }}>
                   {!suggestion && !suggestionLoading && (
                     <div style={{ textAlign: 'center' }}>
-                      <Text size="xl" mb="md">Hungry? Let's find perfect meal.</Text>
-                      <Button
-                        size="lg"
-                        variant="gradient"
-                        gradient={{ from: 'indigo', to: 'cyan' }}
-                        onClick={() => handleGetSuggestion()}
-                      >
+                      <Text size="xl" mb="md">Hungry? Let's find a perfect meal.</Text>
+                      <Button size="lg" variant="gradient" gradient={{ from: 'indigo', to: 'cyan' }} onClick={() => handleGetSuggestion()}>
                         Get Suggestion
                       </Button>
                     </div>
@@ -233,14 +205,7 @@ function Dashboard({ token, onLogout }) {
                         ))}
                       </Group>
 
-                      <Button
-                        mt="xl"
-                        variant="light"
-                        color="gray"
-                        leftSection={<Icons.Refresh />}
-                        onClick={() => handleGetSuggestion(suggestion.id)}
-                        loading={suggestionLoading}
-                      >
+                      <Button mt="xl" variant="light" color="gray" leftSection={<Icons.Refresh />} onClick={() => handleGetSuggestion(suggestion.id)} loading={suggestionLoading}>
                         Try Another
                       </Button>
                     </div>
@@ -250,7 +215,6 @@ function Dashboard({ token, onLogout }) {
                 </Stack>
               </Card>
 
-              {/* WEEKLY PLAN SECTION */}
               <Card shadow="sm" padding="lg" radius="md" withBorder mt="xl">
                 <Card.Section withBorder inheritPadding py="xs">
                   <Group justify="space-between">
@@ -279,7 +243,6 @@ function Dashboard({ token, onLogout }) {
               </Card>
             </Grid.Col>
 
-            {/* RIGHT COLUMN: MEAL VAULT */}
             <Grid.Col span={{ base: 12, md: 5 }}>
               <Card shadow="sm" padding="lg" radius="md" withBorder h="100%">
                 <Card.Section withBorder inheritPadding py="xs">
@@ -288,7 +251,9 @@ function Dashboard({ token, onLogout }) {
 
                 <Stack mt="md">
                   <AddMealForm token={token} onMealAdded={handleMealAdded} />
-                  <Divider my="sm" label="Your Collection" labelPosition="center" />
+                  
+                  {/* Replaced Divider with simple visual separator */}
+                  <div style={{ margin: '16px 0', borderBottom: '1px solid var(--mantine-color-default-border)' }}></div>
 
                   {!meals || meals.length === 0 ? (
                     <DefaultMealSuggestions />
@@ -296,7 +261,7 @@ function Dashboard({ token, onLogout }) {
                     <div style={{ maxHeight: '600px', overflowY: 'auto' }}>
                       <MealList
                         meals={meals}
-                        error={error}
+                        error={fetchError ? fetchError.message : null}
                         onDelete={handleDeleteMeal}
                         onEdit={handleEditClick}
                       />
@@ -307,28 +272,13 @@ function Dashboard({ token, onLogout }) {
             </Grid.Col>
           </Grid>
 
-          {/* FOOTER */}
           <Stack align="center" mt={50} mb="xl" gap={5}>
-            <Text c="dimmed" size="xs">
-              &copy; Meal Rescue 2025
-            </Text>
-            <Text c="dimmed" size="xs">
-              Made with <Text span c="red" inherit>&#10084;&#65039;</Text> for my wife
-            </Text>
+            <Text c="dimmed" size="xs">&copy; Meal Rescue 2025</Text>
+            <Text c="dimmed" size="xs">Made with <Text span c="red" inherit>&#10084;&#65039;</Text> for my wife</Text>
           </Stack>
-
         </Container>
       </AppShell.Main>
 
-      {/* Edit Drawer (Hidden until needed) */}
-      {/* We can use a Modal or just keep the conditional rendering we had. 
-          Modal is nicer but conditional rendering is simpler for now. 
-          Let's use the existing EditForm but as a Overlay if possible? 
-          Actually, let's just stick to the current flow (EditForm component handles its own display if it was a modal, but it wasn't).
-          The EditMealForm seemed to return null if no meal selected? 
-          Let's check EditMealForm. NO, it returns unconditional JSX.
-          So we should only render it if editingMeal is set.
-      */}
       {editingMeal && (
         <div style={{ position: 'fixed', top: 0, left: 0, width: '100%', height: '100%', backgroundColor: 'rgba(0,0,0,0.5)', zIndex: 1000, display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
           <div style={{ width: '90%', maxWidth: '500px' }}>
@@ -341,12 +291,8 @@ function Dashboard({ token, onLogout }) {
           </div>
         </div>
       )}
-
     </AppShell>
   );
 }
-
-// Helper Divider if needed, or import from mantine
-import { Divider } from '@mantine/core';
 
 export default Dashboard;

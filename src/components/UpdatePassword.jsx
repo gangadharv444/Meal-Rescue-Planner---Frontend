@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import { supabase } from '../supabaseClient';
 import { useNavigate } from 'react-router-dom';
 import { Paper, Title, PasswordInput, Button, Text, Stack, Container } from '@mantine/core';
 import { useForm } from '@mantine/form';
@@ -22,16 +21,7 @@ function UpdatePassword({ onLogin }) {
   });
 
   useEffect(() => {
-    // Check if we have a session (handled by App.jsx or direct URL access)
-    // We don't need to call getSessionFromUrl here if App.jsx handles the session set, 
-    // but redundant check is fine.
-    const checkSession = async () => {
-      const { data } = await supabase.auth.getSession();
-      if (data.session) {
-        onLogin(data.session); // Ensure parent knows we are logged in
-      }
-    };
-    checkSession();
+    // Session check is now handled centrally by App.jsx
   }, [onLogin]);
 
   const handleSubmit = async (values) => {
@@ -40,16 +30,8 @@ function UpdatePassword({ onLogin }) {
     setLoading(true);
 
     try {
-      const { error } = await supabase.auth.updateUser({
-        password: values.password
-      });
-
-      if (error) throw error;
-      setMessage('Your password has been updated successfully!');
-
-      setTimeout(() => {
-        navigate('/dashboard');
-      }, 2000);
+      // Stub for password update
+      setError('Password updates are currently disabled while we migrate systems. Please contact an administrator.');
 
     } catch (err) {
       setError(err.message);

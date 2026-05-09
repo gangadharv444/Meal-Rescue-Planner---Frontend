@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import axios from 'axios';
 import { Link, useNavigate } from 'react-router-dom';
-import { supabase } from '../supabaseClient';
 import { API_URL } from '../config';
 
 // Mantine components
@@ -12,7 +11,6 @@ import {
 import { useForm } from '@mantine/form';
 
 import { ThemeToggle } from './ThemeToggle';
-import { GoogleIcon } from './GoogleIcon';
 
 function Signup({ onLogin }) {
   const [error, setError] = useState(null);
@@ -46,21 +44,6 @@ function Signup({ onLogin }) {
       onLogin(response.data.session);
     } catch (err) {
       setError(err.response?.data?.error || 'An error occurred.');
-    }
-  };
-
-  const handleGoogleAuth = async () => {
-    setError(null);
-    try {
-      const { error } = await supabase.auth.signInWithOAuth({
-        provider: 'google',
-        options: {
-          redirectTo: `${window.location.origin}/`,
-        }
-      });
-      if (error) throw error;
-    } catch (err) {
-      setError(err.message);
     }
   };
 
@@ -129,17 +112,6 @@ function Signup({ onLogin }) {
               </Button>
             </Stack>
           </form>
-
-          <Divider label="Or continue with" labelPosition="center" my="lg" />
-
-          <Button
-            fullWidth
-            variant="default"
-            leftSection={<GoogleIcon />}
-            onClick={handleGoogleAuth}
-          >
-            Continue with Google
-          </Button>
 
         </Paper>
       </Container>

@@ -1,6 +1,6 @@
-import React, { useState, useEffect, useCallback } from 'react'; // 1. Import useCallback
+import React, { useState, useEffect, useCallback } from 'react';
 import { Routes, Route, useNavigate } from 'react-router-dom';
-import { supabase } from './supabaseClient';
+import { jwtDecode } from 'jwt-decode';
 
 // Import your page components
 import Login from './components/Login.jsx';
@@ -42,65 +42,41 @@ function App() {
     }
   };
 
-  // 2. Wrap handleLogin in useCallback
   const handleLogin = useCallback((session) => {
     setToken(session.access_token);
     safeStorage.setItem('token', session.access_token);
     navigate('/dashboard');
   }, [navigate]);
 
-  // 3. Wrap handleLogout in useCallback
-  const handleLogout = useCallback(async () => {
-    await supabase.auth.signOut();
+  const handleLogout = useCallback(() => {
     setToken(null);
     safeStorage.removeItem('token');
     navigate('/');
   }, [navigate]);
 
-  // --- THIS IS THE UPDATED PART ---
   useEffect(() => {
-    // 1. Check for an existing session in localStorage
-    const session = safeStorage.getItem('token');
-    if (session) {
-      setToken(session);
-    }
-
-    // 2. Listen for authentication state changes
-    const { data: authListener } = supabase.auth.onAuthStateChange(
-      (event, session) => {
-        console.log(`Supabase Auth Event: ${event}`);
-
-        if (event === 'PASSWORD_RECOVERY') {
-          // User clicked a reset link
-          if (session) setToken(session.access_token);
-          navigate('/update-password');
-        } else if (event === 'SIGNED_IN') {
-          console.log('Signed In session detected');
-          if (window.location.pathname === '/update-password' || window.location.hash.includes('type=recovery')) {
-            if (session) setToken(session.access_token);
-          } else {
-            handleLogin(session);
-          }
-        } else if (event === 'SIGNED_OUT') {
-          setToken(null);
-          safeStorage.removeItem('token');
-          navigate('/');
+    // Check for an existing session in localStorage
+    const savedToken = safeStorage.getItem('token');
+    if (savedToken) {
+      try {
+        const decoded = jwtDecode(savedToken);
+        const currentTime = Date.now() / 1000;
+        if (decoded.exp < currentTime) {
+          // Token expired
+          handleLogout();
+        } else {
+          setToken(savedToken);
         }
+      } catch (e) {
+        console.error('Invalid token', e);
+        handleLogout();
       }
-    );
-
-    // 3. Clean up the listener
-    return () => {
-      authListener.subscription.unsubscribe();
-    };
-
-  }, [navigate, handleLogin, handleLogout]); // 4. Add the functions to the dependency array
+    }
+  }, [handleLogout]); 
 
   return (
     <>
       <Routes>
-
-        {/* Route 1: The Dashboard (Protected) */}
         <Route
           path="/dashboard"
           element={
@@ -111,21 +87,15 @@ function App() {
             )
           }
         />
-
-        {/* Route 2: The Signup Page */}
         <Route
           path="/signup"
           element={<Signup onLogin={handleLogin} />}
         />
-
-        {/* Route 3: The "Forgot Password" Pages */}
         <Route path="/forgot-password" element={<ForgotPassword />} />
         <Route
           path="/update-password"
           element={<UpdatePassword onLogin={handleLogin} />}
         />
-
-        {/* Route 4: The Login Page (Home Page) */}
         <Route
           path="/"
           element={
@@ -136,7 +106,6 @@ function App() {
             )
           }
         />
-
       </Routes>
     </>
   );

@@ -1,5 +1,4 @@
 import React, { useState } from 'react';
-import { supabase } from '../supabaseClient';
 import { Link } from 'react-router-dom';
 
 // Import Mantine components
@@ -25,12 +24,8 @@ function ForgotPassword() {
     setError(null);
     setMessage(null);
     try {
-      const { error } = await supabase.auth.resetPasswordForEmail(values.email, {
-        redirectTo: `${window.location.origin}/update-password`,
-      });
-
-      if (error) throw error;
-      setMessage('Check your email for a password reset link.');
+      // Stub for email reset (needs backend implementation)
+      setError('Password reset is currently disabled while we migrate systems. Please contact an administrator.');
 
     } catch (err) {
       setError(err.message);
